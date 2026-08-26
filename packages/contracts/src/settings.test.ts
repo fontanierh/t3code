@@ -6,6 +6,7 @@ import {
   ClientSettingsSchema,
   ClientSettingsPatch,
   ClaudeSettings,
+  CrabSettings,
   DEFAULT_SERVER_SETTINGS,
   defaultEnabledForDriver,
   resolveProviderInstanceEnabled,
@@ -19,6 +20,7 @@ const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
 const decodeClaudeSettings = Schema.decodeUnknownSync(ClaudeSettings);
+const decodeCrabSettings = Schema.decodeUnknownSync(CrabSettings);
 
 describe("ClaudeSettings auto-compaction", () => {
   it("uses Claude's default threshold when no override is configured", () => {
@@ -46,6 +48,35 @@ describe("ClaudeSettings auto-compaction", () => {
     expect(
       decodeServerSettingsPatch({ providers: { claudeAgent: { autoCompactWindow: "300000" } } }),
     ).toBeDefined();
+  });
+});
+
+describe("CrabSettings", () => {
+  it("defaults to an opt-in local ACP facade", () => {
+    expect(decodeCrabSettings({})).toEqual({
+      enabled: false,
+      binaryPath: "crab-v2-acp-channel",
+      stateDirectory: "",
+      agentId: "",
+      adapterId: "t3code",
+      bootstrapFile: "",
+    });
+  });
+
+  it("trims configured channel identity and paths", () => {
+    expect(
+      decodeCrabSettings({
+        stateDirectory: " /srv/crab/state ",
+        agentId: " jim ",
+        adapterId: " desktop ",
+        bootstrapFile: " /srv/crab/bootstrap.md ",
+      }),
+    ).toMatchObject({
+      stateDirectory: "/srv/crab/state",
+      agentId: "jim",
+      adapterId: "desktop",
+      bootstrapFile: "/srv/crab/bootstrap.md",
+    });
   });
 });
 
