@@ -269,6 +269,46 @@ describe("AcpSessionRuntime", () => {
     ),
   );
 
+  it.effect("allows steering-capable agents to receive an overlapping prompt", () =>
+    Effect.gen(function* () {
+      const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;
+      yield* runtime.start();
+
+      const firstPrompt = yield* runtime
+        .prompt({
+          prompt: [{ type: "text", text: "keep working" }],
+        })
+        .pipe(Effect.forkChild({ startImmediately: true }));
+
+      yield* TestClock.adjust("500 millis");
+      const steeringResult = yield* runtime.prompt({
+        prompt: [{ type: "text", text: "steer now" }],
+      });
+      expect(steeringResult).toMatchObject({ stopReason: "end_turn" });
+
+      yield* runtime.cancel;
+      expect(yield* Fiber.join(firstPrompt)).toMatchObject({ stopReason: "cancelled" });
+    }).pipe(
+      Effect.provide(
+        AcpSessionRuntime.layer({
+          spawn: {
+            command: mockAgentCommand,
+            args: mockAgentArgs,
+            env: {
+              T3_ACP_HANG_FIRST_PROMPT_FOREVER: "1",
+            },
+          },
+          cwd: process.cwd(),
+          clientInfo: { name: "t3-test", version: "0.0.0" },
+          authMethodId: "test",
+          promptConcurrency: "concurrent",
+        }),
+      ),
+      Effect.scoped,
+      Effect.provide(NodeServices.layer),
+    ),
+  );
+
   it.effect("segments assistant text around ACP tool calls", () =>
     Effect.gen(function* () {
       const runtime = yield* AcpSessionRuntime.AcpSessionRuntime;

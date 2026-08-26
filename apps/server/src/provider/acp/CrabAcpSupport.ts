@@ -17,7 +17,7 @@ type CrabAcpRuntimeSettings = Pick<
 
 export interface CrabAcpRuntimeInput extends Omit<
   AcpSessionRuntime.AcpSessionRuntimeOptions,
-  "authMethodId" | "clientCapabilities" | "spawn"
+  "authMethodId" | "clientCapabilities" | "promptConcurrency" | "spawn"
 > {
   readonly childProcessSpawner: ChildProcessSpawner.ChildProcessSpawner["Service"];
   readonly crabSettings: CrabAcpRuntimeSettings;
@@ -58,6 +58,7 @@ export const makeCrabAcpRuntime = (
         ...input,
         spawn: buildCrabAcpSpawnInput(input.crabSettings, input.cwd, input.environment),
         authMethodId: CRAB_AUTH_METHOD_ID,
+        promptConcurrency: "concurrent",
       }).pipe(
         Layer.provide(
           Layer.succeed(ChildProcessSpawner.ChildProcessSpawner, input.childProcessSpawner),
