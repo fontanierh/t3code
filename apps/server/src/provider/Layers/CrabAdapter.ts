@@ -32,7 +32,6 @@ import type * as EffectAcpSchema from "effect-acp/schema";
 
 import { resolveAttachmentPath } from "../../attachmentStore.ts";
 import { ServerConfig } from "../../config.ts";
-import * as McpProviderSession from "../../mcp/McpProviderSession.ts";
 import {
   ProviderAdapterRequestError,
   type ProviderAdapterError,
@@ -189,7 +188,6 @@ export function makeCrabAdapter(settings: CrabSettings, options?: CrabAdapterOpt
             sessionScopeTransferred ? Effect.void : Scope.close(sessionScope, Exit.void),
           );
           const resumeSessionId = parseCrabResume(input.resumeCursor)?.sessionId;
-          const mcpSession = McpProviderSession.readMcpProviderSession(input.threadId);
           const acp = yield* makeCrabAcpRuntime({
             crabSettings: settings,
             ...(options?.environment ? { environment: options.environment } : {}),
@@ -197,18 +195,9 @@ export function makeCrabAdapter(settings: CrabSettings, options?: CrabAdapterOpt
             cwd,
             ...(resumeSessionId ? { resumeSessionId } : {}),
             clientInfo: { name: "t3-code", version: "0.0.0" },
-            ...(mcpSession
-              ? {
-                  mcpServers: [
-                    {
-                      type: "http" as const,
-                      name: "t3-code",
-                      url: mcpSession.endpoint,
-                      headers: [{ name: "Authorization", value: mcpSession.authorizationHeader }],
-                    },
-                  ],
-                }
-              : {}),
+            // Crab owns the underlying agent and its tools. Forwarding T3's
+            // per-thread MCP server would transfer authority across the attach
+            // seam and Crab's facade intentionally rejects that request.
           }).pipe(
             Effect.provideService(Crypto.Crypto, crypto),
             Effect.provideService(Scope.Scope, sessionScope),

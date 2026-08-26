@@ -6,7 +6,13 @@ import * as NodeURL from "node:url";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
-import { CrabSettings, ProviderDriverKind, ProviderInstanceId, ThreadId } from "@t3tools/contracts";
+import {
+  CrabSettings,
+  EnvironmentId,
+  ProviderDriverKind,
+  ProviderInstanceId,
+  ThreadId,
+} from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
@@ -16,6 +22,7 @@ import * as Stream from "effect/Stream";
 import { describe } from "vite-plus/test";
 
 import { ServerConfig } from "../../config.ts";
+import { clearMcpProviderSession, setMcpProviderSession } from "../../mcp/McpProviderSession.ts";
 import type { ProviderAdapterError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
 import { makeCrabAdapter } from "./CrabAdapter.ts";
@@ -121,9 +128,17 @@ describe("CrabAdapter", () => {
           T3_ACP_REQUEST_LOG_PATH: requestLogPath,
         }),
       );
+      const threadId = ThreadId.make("crab-steering-thread");
       return yield* Effect.gen(function* () {
         const adapter = yield* CrabAdapter;
-        const threadId = ThreadId.make("crab-steering-thread");
+        setMcpProviderSession({
+          environmentId: EnvironmentId.make("test-environment"),
+          threadId,
+          providerSessionId: "t3-mcp-session",
+          providerInstanceId: ProviderInstanceId.make("crab"),
+          endpoint: "http://127.0.0.1:3773/mcp",
+          authorizationHeader: "Bearer must-not-cross-crab-attach",
+        });
         yield* adapter.startSession({
           threadId,
           provider: ProviderDriverKind.make("crab"),
@@ -144,6 +159,24 @@ describe("CrabAdapter", () => {
           .trim()
           .split("\n")
           .map((line) => JSON.parse(line) as Record<string, unknown>);
+        const newSessionRequest = requests.find((request) => request.method === "session/new");
+        const newSessionParams = newSessionRequest?.params as
+          | { readonly mcpServers?: ReadonlyArray<unknown> }
+          | undefined;
+        assert.deepEqual(newSessionParams?.mcpServers, []);
+        const containsCredential = (value: unknown): boolean => {
+          if (typeof value === "string") {
+            return value.includes("must-not-cross-crab-attach");
+          }
+          if (Array.isArray(value)) {
+            return value.some(containsCredential);
+          }
+          if (typeof value === "object" && value !== null) {
+            return Object.values(value).some(containsCredential);
+          }
+          return false;
+        };
+        assert.isFalse(containsCredential(newSessionRequest));
         const promptRequests = requests.filter((request) => request.method === "session/prompt");
         assert.lengthOf(promptRequests, 2);
         const inputMode = (request: Record<string, unknown> | undefined) =>
@@ -154,7 +187,11 @@ describe("CrabAdapter", () => {
           )?._meta?.crab?.inputMode;
         assert.equal(inputMode(promptRequests[0]), "queue");
         assert.equal(inputMode(promptRequests[1]), "steer");
-      }).pipe(Effect.provide(makeAdapterLayer(mock.wrapperPath)), Effect.scoped);
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => clearMcpProviderSession(threadId))),
+        Effect.provide(makeAdapterLayer(mock.wrapperPath)),
+        Effect.scoped,
+      );
     }),
   );
 });
