@@ -12,6 +12,23 @@ export function ProviderIcon(props: ProviderIconProps) {
   const size = props.size ?? 16;
   const mono = isDarkMode ? "#e5e5e5" : "#171717";
 
+  if (props.provider === "crab") {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
+        <Path
+          fill={mono}
+          d="M19 30c0-8 5.8-14 13-14s13 6 13 14v7c0 7-5.8 12-13 12s-13-5-13-12v-7Z"
+        />
+        <Path
+          stroke={mono}
+          strokeWidth={4}
+          strokeLinecap="round"
+          d="M22 23 15 17m27 6 7-6M18 33H9l-5-5m42 5h9l5-5M18 39l-9 5-3 6m40-11 9 5 3 6M23 47l-5 8m23-8 5 8M15 17c-5-1-8 1-8 5 0 3 3 6 8 6m34-11c5-1 8 1 8 5 0 3-3 6-8 6"
+        />
+      </Svg>
+    );
+  }
+
   if (props.provider === "claudeAgent") {
     return (
       <Svg width={size} height={size} viewBox="0 0 256 257" fill="none">

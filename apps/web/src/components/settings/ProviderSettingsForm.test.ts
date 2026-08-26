@@ -49,6 +49,19 @@ describe("ProviderSettingsForm helpers", () => {
     ]);
   });
 
+  it("exposes the Crab native-channel identity fields", () => {
+    const crab = DRIVER_OPTION_BY_VALUE[ProviderDriverKind.make("crab")];
+    expect(crab).toBeDefined();
+
+    expect(deriveProviderSettingsFields(crab!).map((field) => field.key)).toEqual([
+      "binaryPath",
+      "stateDirectory",
+      "agentId",
+      "adapterId",
+      "bootstrapFile",
+    ]);
+  });
+
   it("preserves unknown config keys while omitting empty configurable fields", () => {
     const opencode = DRIVER_OPTION_BY_VALUE[ProviderDriverKind.make("opencode")];
     expect(opencode).toBeDefined();

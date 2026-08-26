@@ -556,6 +556,10 @@ export const CrabSettings = makeProviderSettingsSchema(
         },
       }),
     ),
+    customModels: Schema.Array(Schema.String).pipe(
+      Schema.withDecodingDefault(Effect.succeed([])),
+      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
+    ),
   },
   {
     order: ["binaryPath", "stateDirectory", "agentId", "adapterId", "bootstrapFile"],
@@ -910,6 +914,7 @@ const CrabSettingsPatch = Schema.Struct({
   agentId: Schema.optionalKey(TrimmedString),
   adapterId: Schema.optionalKey(TrimmedString),
   bootstrapFile: Schema.optionalKey(TrimmedString),
+  customModels: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 
 const OpenCodeSettingsPatch = Schema.Struct({
