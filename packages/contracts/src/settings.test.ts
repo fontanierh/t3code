@@ -60,6 +60,7 @@ describe("CrabSettings", () => {
       agentId: "",
       adapterId: "t3code",
       bootstrapFile: "",
+      customModels: [],
     });
   });
 
