@@ -498,6 +498,71 @@ export const GrokSettings = makeProviderSettingsSchema(
 );
 export type GrokSettings = typeof GrokSettings.Type;
 
+/**
+ * Configuration for Crab's ACP stdio facade. Crab owns the durable session
+ * and underlying agent process; T3 Code only owns this short-lived ACP client.
+ */
+export const CrabSettings = makeProviderSettingsSchema(
+  {
+    enabled: Schema.Boolean.pipe(
+      Schema.withDecodingDefault(Effect.succeed(false)),
+      Schema.annotateKey({ providerSettingsForm: { hidden: true } }),
+    ),
+    binaryPath: makeBinaryPathSetting("crab-v2-acp-channel").pipe(
+      Schema.annotateKey({
+        title: "Binary path",
+        description: "Path to Crab's ACP channel facade.",
+        providerSettingsForm: {
+          placeholder: "crab-v2-acp-channel",
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    stateDirectory: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "State directory",
+        description: "Crab v2 runtime state directory.",
+        providerSettingsForm: {
+          placeholder: "/absolute/path/to/crab/state",
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+    agentId: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "Agent ID",
+        description: "Crab agent exposed through this provider instance.",
+        providerSettingsForm: { placeholder: "jim", clearWhenEmpty: "omit" },
+      }),
+    ),
+    adapterId: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("t3code")),
+      Schema.annotateKey({
+        title: "Adapter ID",
+        description: "Stable Crab native-channel adapter identity.",
+        providerSettingsForm: { placeholder: "t3code", clearWhenEmpty: "omit" },
+      }),
+    ),
+    bootstrapFile: TrimmedString.pipe(
+      Schema.withDecodingDefault(Effect.succeed("")),
+      Schema.annotateKey({
+        title: "Bootstrap file",
+        description: "Optional context file injected when Crab creates a channel.",
+        providerSettingsForm: {
+          placeholder: "/absolute/path/to/bootstrap.md",
+          clearWhenEmpty: "omit",
+        },
+      }),
+    ),
+  },
+  {
+    order: ["binaryPath", "stateDirectory", "agentId", "adapterId", "bootstrapFile"],
+  },
+);
+export type CrabSettings = typeof CrabSettings.Type;
+
 export const OpenCodeSettings = makeProviderSettingsSchema(
   {
     // Off by default (like Cursor and Grok): the binding is not yet stable
