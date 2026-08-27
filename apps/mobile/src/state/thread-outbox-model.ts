@@ -101,6 +101,34 @@ export function resolveQueuedThreadSettings(
   };
 }
 
+/** Reconstruct the exact remote command after a mobile outbox round-trip. */
+export function buildQueuedExistingThreadTurnInput(
+  message: QueuedThreadMessage,
+  settings: ThreadSettingsSnapshot,
+) {
+  return {
+    commandId: message.commandId,
+    threadId: message.threadId,
+    message: {
+      messageId: message.messageId,
+      role: "user" as const,
+      text: message.text,
+      attachments: message.attachments.map((attachment) => ({
+        type: attachment.type,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        dataUrl: attachment.dataUrl,
+      })),
+    },
+    modelSelection: settings.modelSelection,
+    runtimeMode: settings.runtimeMode,
+    interactionMode: settings.interactionMode,
+    ...(message.deliveryMode !== undefined ? { deliveryMode: message.deliveryMode } : {}),
+    createdAt: message.createdAt,
+  };
+}
+
 export function modelSelectionsEqual(left: ModelSelectionType, right: ModelSelectionType): boolean {
   return (
     left.instanceId === right.instanceId &&
