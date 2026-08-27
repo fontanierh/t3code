@@ -18,6 +18,7 @@ import {
   type KeybindingCommand,
   OrchestrationThreadActivity,
   ProviderInteractionMode,
+  type ProviderTurnDeliveryMode,
   ProviderDriverKind,
   RuntimeMode,
   TerminalOpenInput,
@@ -5334,6 +5335,7 @@ function ChatViewContent(props: ChatViewProps) {
       annotation: PreviewAnnotationPayload;
       image: ComposerImageAttachment | null;
     },
+    deliveryMode?: ProviderTurnDeliveryMode,
   ) => {
     e?.preventDefault();
     const notifyDirectAnnotationAttached = () => {
@@ -5870,6 +5872,7 @@ function ChatViewContent(props: ChatViewProps) {
           titleSeed: title,
           runtimeMode,
           interactionMode,
+          ...(deliveryMode !== undefined ? { deliveryMode } : {}),
           ...(bootstrap ? { bootstrap } : {}),
           createdAt: messageCreatedAt,
         },
@@ -7084,7 +7087,9 @@ function ChatViewContent(props: ChatViewProps) {
                             composerImagesRef={composerImagesRef}
                             composerTerminalContextsRef={composerTerminalContextsRef}
                             composerElementContextsRef={composerElementContextsRef}
-                            onSend={onSend}
+                            onSend={(event, intent, deliveryMode) =>
+                              onSend(event, intent, undefined, deliveryMode)
+                            }
                             onInterrupt={onInterrupt}
                             onImplementPlanInNewThread={onImplementPlanInNewThread}
                             onRespondToApproval={onRespondToApproval}

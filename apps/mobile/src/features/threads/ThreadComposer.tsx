@@ -4,6 +4,7 @@ import type {
   ModelSelection,
   OrchestrationThreadShell,
   ProviderInteractionMode,
+  ProviderTurnDeliveryMode as TurnDeliveryMode,
   RuntimeMode,
   ServerConfig as T3ServerConfig,
 } from "@t3tools/contracts";
@@ -115,7 +116,7 @@ export interface ThreadComposerProps {
   readonly onNativePasteImages: (uris: ReadonlyArray<string>) => Promise<void>;
   readonly onRemoveDraftImage: (imageId: string) => void;
   readonly onStopThread: () => void;
-  readonly onSendMessage: () => Promise<MessageId | null>;
+  readonly onSendMessage: (deliveryMode?: TurnDeliveryMode) => Promise<MessageId | null>;
   readonly onUpdateModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateRuntimeMode: (runtimeMode: RuntimeMode) => void;
   readonly onUpdateInteractionMode: (interactionMode: ProviderInteractionMode) => void;
@@ -332,8 +333,6 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
     props.selectedThread.session?.status === "running" ||
     props.selectedThread.session?.status === "starting";
 
-  const sendLabel =
-    props.connectionState !== "connected" || props.queueCount > 0 ? "Queue" : "Send";
   const currentModelSelection = props.selectedThread.modelSelection;
   const currentRuntimeMode = props.selectedThread.runtimeMode;
   const connectionStatus = composerConnectionStatus({
@@ -355,6 +354,12 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
       ) ?? null
     );
   }, [props.serverConfig, props.selectedThread.modelSelection.instanceId]);
+  const showCrabDeliveryActions =
+    showStopAction &&
+    (selectedProviderStatus?.driver === "crab" ||
+      props.selectedThread.session?.providerName === "crab");
+  const sendLabel =
+    props.connectionState !== "connected" || props.queueCount > 0 ? "Queue" : "Send";
 
   // ── Trigger detection ────────────────────────────────────
   const [composerSelection, setComposerSelection] = useState(() => ({
@@ -547,34 +552,37 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
   // ── Handle command selection ──────────────────────────────
   const { onChangeDraftMessage, onUpdateInteractionMode, draftMessage, onSendMessage } = props;
 
-  const handleSend = useCallback(async () => {
-    const threadKey = scopedThreadKey(props.environmentId, props.selectedThread.id);
-    if (inFlightThreadIdsRef.current.has(threadKey)) return;
-    inFlightThreadIdsRef.current.add(threadKey);
-    try {
-      const messageId = await onSendMessage();
-      if (messageId === null) {
-        return;
+  const handleSend = useCallback(
+    async (deliveryMode?: TurnDeliveryMode) => {
+      const threadKey = scopedThreadKey(props.environmentId, props.selectedThread.id);
+      if (inFlightThreadIdsRef.current.has(threadKey)) return;
+      inFlightThreadIdsRef.current.add(threadKey);
+      try {
+        const messageId = await onSendMessage(deliveryMode);
+        if (messageId === null) {
+          return;
+        }
+        // Sending a prompt starts agent work: arm the lock-screen card while the
+        // app is foregrounded and the activity token can be registered. Armed
+        // after the send so its preference read and native Activity start don't
+        // contend with the queued-message feedback on the tap frame.
+        armAgentAwarenessLiveActivityForLocalWork({
+          environmentId: props.environmentId,
+          threadTitle: props.selectedThread.title,
+          projectTitle: props.environmentLabel ?? "T3 Code",
+        });
+      } finally {
+        inFlightThreadIdsRef.current.delete(threadKey);
       }
-      // Sending a prompt starts agent work: arm the lock-screen card while the
-      // app is foregrounded and the activity token can be registered. Armed
-      // after the send so its preference read and native Activity start don't
-      // contend with the queued-message feedback on the tap frame.
-      armAgentAwarenessLiveActivityForLocalWork({
-        environmentId: props.environmentId,
-        threadTitle: props.selectedThread.title,
-        projectTitle: props.environmentLabel ?? "T3 Code",
-      });
-    } finally {
-      inFlightThreadIdsRef.current.delete(threadKey);
-    }
-  }, [
-    onSendMessage,
-    props.environmentId,
-    props.environmentLabel,
-    props.selectedThread.id,
-    props.selectedThread.title,
-  ]);
+    },
+    [
+      onSendMessage,
+      props.environmentId,
+      props.environmentLabel,
+      props.selectedThread.id,
+      props.selectedThread.title,
+    ],
+  );
   const handleCommandSelect = useCallback(
     (item: ComposerCommandItem) => {
       if (!composerTrigger) return;
@@ -805,7 +813,7 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
               placeholder={props.placeholder}
               onFocus={handleFocus}
               onBlur={handleBlur}
-              onSubmit={handleSend}
+              onSubmit={() => void handleSend()}
               scrollEnabled={isExpanded}
               // Android: collapsed single line centers natively (gravity) in
               // a pill-height box matching the send button; iOS keeps insets.
@@ -852,13 +860,37 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
           {!isExpanded ? (
             <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(100)}>
               {showStopAction ? (
-                <ControlPill icon="stop.fill" variant="danger" onPress={props.onStopThread} />
+                <View className="flex-row items-center gap-1">
+                  {showCrabDeliveryActions && canSend ? (
+                    <>
+                      <ControlPill
+                        label="Queue"
+                        variant="pill"
+                        className="h-9 px-3"
+                        onPress={() => void handleSend("queue")}
+                      />
+                      <ControlPill
+                        label="Steer"
+                        variant="primary"
+                        className="h-9 px-3"
+                        onPress={() => void handleSend("steer")}
+                      />
+                    </>
+                  ) : null}
+                  <ControlPill
+                    accessibilityLabel="Stop"
+                    icon="stop.fill"
+                    variant="danger"
+                    className="h-9 w-9"
+                    onPress={props.onStopThread}
+                  />
+                </View>
               ) : (
                 <ControlPill
                   icon="arrow.up"
                   variant="primary"
                   disabled={!canSend}
-                  onPress={handleSend}
+                  onPress={() => void handleSend()}
                 />
               )}
             </Animated.View>
@@ -895,15 +927,35 @@ export const ThreadComposer = memo(function ThreadComposer(props: ThreadComposer
                     showChevron={false}
                   />
                 ) : null}
+                {showCrabDeliveryActions ? (
+                  <ComposerToolbarButton
+                    accessibilityLabel="Queue message"
+                    label="Queue"
+                    disabled={!canSend}
+                    onPress={() => void handleSend("queue")}
+                    showChevron={false}
+                  />
+                ) : null}
               </ComposerToolbarScroller>
-              <ComposerToolbarButton
-                accessibilityLabel={sendLabel}
-                icon="arrow.up"
-                variant="primary"
-                disabled={!canSend}
-                onPress={handleSend}
-                showChevron={false}
-              />
+              {showCrabDeliveryActions ? (
+                <ComposerToolbarButton
+                  accessibilityLabel="Steer active work"
+                  label="Steer"
+                  variant="primary"
+                  disabled={!canSend}
+                  onPress={() => void handleSend("steer")}
+                  showChevron={false}
+                />
+              ) : (
+                <ComposerToolbarButton
+                  accessibilityLabel={sendLabel}
+                  icon="arrow.up"
+                  variant="primary"
+                  disabled={!canSend}
+                  onPress={() => void handleSend()}
+                  showChevron={false}
+                />
+              )}
             </ComposerToolbarRow>
           ) : null}
         </ComposerSurface>

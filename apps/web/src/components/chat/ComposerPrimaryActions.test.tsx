@@ -65,7 +65,11 @@ function renderStandaloneStop() {
   );
 }
 
-function renderRunningActions(showSendWhileRunning: boolean, hasSendableContent: boolean) {
+function renderRunningActions(
+  showSendWhileRunning: boolean,
+  hasSendableContent: boolean,
+  showDeliveryActionsWhileRunning = false,
+) {
   return renderToStaticMarkup(
     createElement(ComposerPrimaryActions, {
       compact: true,
@@ -80,8 +84,10 @@ function renderRunningActions(showSendWhileRunning: boolean, hasSendableContent:
       isPreparingWorktree: false,
       hasSendableContent,
       showSendWhileRunning,
+      showDeliveryActionsWhileRunning,
       onPreviousPendingQuestion: () => {},
       onInterrupt: () => {},
+      onDeliverWhileRunning: () => {},
       onImplementPlanInNewThread: () => {},
     }),
   );
@@ -262,9 +268,21 @@ describe("ComposerPrimaryActions", () => {
   });
 
   it("keeps stop as the only action while running with an empty composer", () => {
-    const markup = renderRunningActions(true, false);
+    const markup = renderRunningActions(true, false, true);
 
     expect(markup).toContain('aria-label="Stop generation"');
+    expect(markup).not.toContain('aria-label="Send message"');
+    expect(markup).not.toContain(">Queue<");
+    expect(markup).not.toContain(">Steer<");
+  });
+
+  it("renders explicit Queue and Steer alongside Interrupt for an active Crab channel", () => {
+    const markup = renderRunningActions(true, true, true);
+
+    expect(markup).toContain('aria-label="Stop generation"');
+    expect(markup).toContain('aria-label="Deliver message to active Crab channel"');
+    expect(markup).toContain(">Queue<");
+    expect(markup).toContain(">Steer<");
     expect(markup).not.toContain('aria-label="Send message"');
   });
 });
