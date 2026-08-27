@@ -348,8 +348,10 @@ export function makeCrabAdapter(settings: CrabSettings, options?: CrabAdapterOpt
     const sendTurn: ProviderAdapterShape<ProviderAdapterError>["sendTurn"] = (input) =>
       Effect.gen(function* () {
         const context = yield* requireSession(input.threadId);
-        const steeringTurnId = context.promptsInFlight > 0 ? context.activeTurnId : undefined;
-        const turnId = steeringTurnId ?? TurnId.make(yield* randomUUIDv4);
+        const activeTurnId = context.promptsInFlight > 0 ? context.activeTurnId : undefined;
+        const turnId = activeTurnId ?? TurnId.make(yield* randomUUIDv4);
+        const clientInputId = yield* randomUUIDv4;
+        const inputMode = input.deliveryMode ?? (activeTurnId === undefined ? "queue" : "steer");
         context.promptsInFlight += 1;
         return yield* Effect.gen(function* () {
           context.activeTurnId = turnId;
@@ -358,7 +360,7 @@ export function makeCrabAdapter(settings: CrabSettings, options?: CrabAdapterOpt
             activeTurnId: turnId,
             updatedAt: yield* nowIso,
           };
-          if (steeringTurnId === undefined) {
+          if (activeTurnId === undefined) {
             yield* offerRuntimeEvent({
               type: "turn.started",
               ...(yield* makeEventStamp()),
@@ -413,8 +415,8 @@ export function makeCrabAdapter(settings: CrabSettings, options?: CrabAdapterOpt
               prompt,
               _meta: {
                 crab: {
-                  inputMode: steeringTurnId === undefined ? "queue" : "steer",
-                  turnId,
+                  inputMode,
+                  turnId: clientInputId,
                 },
               },
             })

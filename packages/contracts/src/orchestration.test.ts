@@ -240,6 +240,7 @@ it.effect("decodes thread.turn.start defaults for provider and runtime mode", ()
     assert.strictEqual(parsed.modelSelection, undefined);
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
     assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+    assert.strictEqual(parsed.deliveryMode, undefined);
   }),
 );
 
@@ -281,6 +282,30 @@ it.effect("accepts both inline and uploaded image attachments from clients", () 
     assert.strictEqual(command.message.attachments.length, 2);
     assert.strictEqual("dataUrl" in command.message.attachments[0]!, true);
     assert.strictEqual("id" in command.message.attachments[1]!, true);
+  }),
+);
+
+it.effect("preserves explicit delivery mode in thread.turn.start", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decodeClientOrchestrationCommand({
+      type: "thread.turn.start",
+      commandId: "cmd-turn-delivery",
+      threadId: "thread-1",
+      message: {
+        messageId: "msg-delivery",
+        role: "user",
+        text: "queue this",
+        attachments: [],
+      },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      deliveryMode: "queue",
+      createdAt: "2026-01-01T00:00:00.000Z",
+    });
+    if (parsed.type !== "thread.turn.start") {
+      assert.fail(`Expected thread.turn.start, received ${parsed.type}.`);
+    }
+    assert.strictEqual(parsed.deliveryMode, "queue");
   }),
 );
 
@@ -800,6 +825,7 @@ it.effect(
       assert.strictEqual(parsed.modelSelection, undefined);
       assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
       assert.strictEqual(parsed.interactionMode, DEFAULT_PROVIDER_INTERACTION_MODE);
+      assert.strictEqual(parsed.deliveryMode, undefined);
       assert.strictEqual(parsed.sourceProposedPlan, undefined);
     }),
 );
