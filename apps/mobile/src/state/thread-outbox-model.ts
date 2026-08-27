@@ -8,11 +8,13 @@ import {
   ModelSelection,
   ProjectId,
   ProviderInteractionMode,
+  ProviderTurnDeliveryMode,
   RuntimeMode,
   ThreadId,
   type ModelSelection as ModelSelectionType,
   type ProjectId as ProjectIdType,
   type ProviderInteractionMode as ProviderInteractionModeType,
+  type ProviderTurnDeliveryMode as ProviderTurnDeliveryModeType,
   type RuntimeMode as RuntimeModeType,
 } from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
@@ -21,7 +23,7 @@ import { DraftComposerImageAttachmentSchema } from "../lib/composer-image-schema
 import type { DraftComposerImageAttachment } from "../lib/composerImages";
 import { scopedThreadKey } from "../lib/scopedEntities";
 
-const THREAD_OUTBOX_SCHEMA_VERSION = 3;
+const THREAD_OUTBOX_SCHEMA_VERSION = 4;
 const THREAD_OUTBOX_MAX_RETRY_DELAY_MS = 16_000;
 
 const QueuedThreadCreationSchema = Schema.Struct({
@@ -37,7 +39,7 @@ const QueuedThreadCreationSchema = Schema.Struct({
 });
 
 export const QueuedThreadMessageSchema = Schema.Struct({
-  schemaVersion: Schema.Literals([1, 2, THREAD_OUTBOX_SCHEMA_VERSION]),
+  schemaVersion: Schema.Literals([1, 2, 3, THREAD_OUTBOX_SCHEMA_VERSION]),
   environmentId: EnvironmentId,
   threadId: ThreadId,
   messageId: MessageId,
@@ -47,6 +49,7 @@ export const QueuedThreadMessageSchema = Schema.Struct({
   modelSelection: Schema.optional(ModelSelection),
   runtimeMode: Schema.optional(RuntimeMode),
   interactionMode: Schema.optional(ProviderInteractionMode),
+  deliveryMode: Schema.optional(ProviderTurnDeliveryMode),
   // Present when the queued item creates a brand-new thread (pending task)
   // instead of appending a turn to an existing one.
   creation: Schema.optional(QueuedThreadCreationSchema),
@@ -76,6 +79,7 @@ export interface QueuedThreadMessage {
   readonly modelSelection?: ModelSelectionType;
   readonly runtimeMode?: RuntimeModeType;
   readonly interactionMode?: ProviderInteractionModeType;
+  readonly deliveryMode?: ProviderTurnDeliveryModeType;
   readonly creation?: QueuedThreadCreation;
   readonly createdAt: string;
 }
@@ -94,6 +98,34 @@ export function resolveQueuedThreadSettings(
     modelSelection: message.modelSelection ?? thread.modelSelection,
     runtimeMode: message.runtimeMode ?? thread.runtimeMode,
     interactionMode: message.interactionMode ?? thread.interactionMode,
+  };
+}
+
+/** Reconstruct the exact remote command after a mobile outbox round-trip. */
+export function buildQueuedExistingThreadTurnInput(
+  message: QueuedThreadMessage,
+  settings: ThreadSettingsSnapshot,
+) {
+  return {
+    commandId: message.commandId,
+    threadId: message.threadId,
+    message: {
+      messageId: message.messageId,
+      role: "user" as const,
+      text: message.text,
+      attachments: message.attachments.map((attachment) => ({
+        type: attachment.type,
+        name: attachment.name,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+        dataUrl: attachment.dataUrl,
+      })),
+    },
+    modelSelection: settings.modelSelection,
+    runtimeMode: settings.runtimeMode,
+    interactionMode: settings.interactionMode,
+    ...(message.deliveryMode !== undefined ? { deliveryMode: message.deliveryMode } : {}),
+    createdAt: message.createdAt,
   };
 }
 

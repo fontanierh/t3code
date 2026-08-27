@@ -10,6 +10,7 @@ import {
 import { AtomRegistry } from "effect/unstable/reactivity";
 
 import {
+  buildQueuedExistingThreadTurnInput,
   decodeQueuedThreadMessage,
   encodeQueuedThreadMessage,
   groupQueuedThreadMessages,
@@ -92,22 +93,29 @@ describe("thread outbox", () => {
       },
       runtimeMode: "approval-required",
       interactionMode: "plan",
+      deliveryMode: "queue",
     } satisfies QueuedThreadMessage;
 
     expect(decodeQueuedThreadMessage(encodeQueuedThreadMessage(selectedMessage))).toEqual(
       selectedMessage,
     );
-    expect(
-      resolveQueuedThreadSettings(legacyMessage, {
-        modelSelection: selectedMessage.modelSelection,
-        runtimeMode: selectedMessage.runtimeMode,
-        interactionMode: selectedMessage.interactionMode,
-      }),
-    ).toEqual({
+    const settings = {
       modelSelection: selectedMessage.modelSelection,
       runtimeMode: selectedMessage.runtimeMode,
       interactionMode: selectedMessage.interactionMode,
+    };
+    expect(resolveQueuedThreadSettings(legacyMessage, settings)).toEqual(settings);
+    expect(buildQueuedExistingThreadTurnInput(selectedMessage, settings)).toMatchObject({
+      commandId: selectedMessage.commandId,
+      threadId: selectedMessage.threadId,
+      deliveryMode: "queue",
+      modelSelection: selectedMessage.modelSelection,
+      runtimeMode: "approval-required",
+      interactionMode: "plan",
     });
+    expect(buildQueuedExistingThreadTurnInput(legacyMessage, settings)).not.toHaveProperty(
+      "deliveryMode",
+    );
   });
 
   it("compares model options as part of the queued settings change", () => {

@@ -1,4 +1,5 @@
 import { memo, type PointerEventHandler } from "react";
+import type { ProviderTurnDeliveryMode } from "@t3tools/contracts";
 import { ChevronDownIcon, ChevronLeftIcon } from "lucide-react";
 import { useEnvironmentIdentificationMode } from "~/hooks/useSettings";
 import { cn } from "~/lib/utils";
@@ -31,8 +32,10 @@ interface ComposerPrimaryActionsProps {
   /** Enter-to-send is disabled on mobile viewports, where stop would otherwise
    * be the only primary action and a running turn could not be steered. */
   showSendWhileRunning?: boolean;
+  showDeliveryActionsWhileRunning?: boolean;
   onPreviousPendingQuestion: () => void;
   onInterrupt: () => void;
+  onDeliverWhileRunning?: (mode: ProviderTurnDeliveryMode) => void;
   onImplementPlanInNewThread: () => void;
 }
 
@@ -72,8 +75,10 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
   hasSendableContent,
   preserveComposerFocusOnPointerDown = false,
   showSendWhileRunning = false,
+  showDeliveryActionsWhileRunning = false,
   onPreviousPendingQuestion,
   onInterrupt,
+  onDeliverWhileRunning,
   onImplementPlanInNewThread,
 }: ComposerPrimaryActionsProps) {
   const pointerFocusProps = preserveComposerFocusOnPointerDown
@@ -274,10 +279,41 @@ export const ComposerPrimaryActions = memo(function ComposerPrimaryActions({
     return sendButton;
   }
 
+  const deliveryActions =
+    showDeliveryActionsWhileRunning && hasSendableContent && onDeliverWhileRunning ? (
+      <div
+        role="group"
+        aria-label="Deliver message to active Crab channel"
+        className="flex items-center"
+      >
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-9 rounded-l-full rounded-r-none px-3 sm:h-8"
+          {...pointerFocusProps}
+          disabled={isSendBusy || isSendDisabled || isConnecting || isEnvironmentUnavailable}
+          onClick={() => onDeliverWhileRunning("queue")}
+        >
+          Queue
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className="h-9 rounded-l-none rounded-r-full border-l-message-action-foreground/20 bg-message-action px-3 text-message-action-foreground hover:bg-message-action-hover sm:h-8"
+          {...pointerFocusProps}
+          disabled={isSendBusy || isSendDisabled || isConnecting || isEnvironmentUnavailable}
+          onClick={() => onDeliverWhileRunning("steer")}
+        >
+          Steer
+        </Button>
+      </div>
+    ) : null;
+
   return (
     <>
       {renderStopGenerationButton(false)}
-      {showSendWhileRunning && hasSendableContent ? sendButton : null}
+      {deliveryActions ?? (showSendWhileRunning && hasSendableContent ? sendButton : null)}
     </>
   );
 });

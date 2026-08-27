@@ -17,7 +17,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { scopedThreadKey } from "../lib/scopedEntities";
 import { buildProjectThreadStartTurnInput } from "../lib/projectThreadStartTurn";
-import { toUploadChatImageAttachments } from "../lib/composerImages";
 import { randomHex } from "../lib/uuid";
 import { appAtomRegistry } from "./atom-registry";
 import { useProjects, useThreadShells } from "./entities";
@@ -27,6 +26,7 @@ import {
   removeThreadOutboxMessage,
 } from "./thread-outbox";
 import {
+  buildQueuedExistingThreadTurnInput,
   isQueuedThreadCreationSendable,
   modelSelectionsEqual,
   resolveThreadOutboxDeliveryAction,
@@ -219,20 +219,7 @@ export function useThreadOutboxDrain(): void {
 
       const deliveryResult = await startTurn({
         environmentId: queuedMessage.environmentId,
-        input: {
-          commandId: queuedMessage.commandId,
-          threadId: queuedMessage.threadId,
-          message: {
-            messageId: queuedMessage.messageId,
-            role: "user",
-            text: queuedMessage.text,
-            attachments: toUploadChatImageAttachments(queuedMessage.attachments),
-          },
-          modelSelection: settings.modelSelection,
-          runtimeMode: settings.runtimeMode,
-          interactionMode: settings.interactionMode,
-          createdAt: queuedMessage.createdAt,
-        },
+        input: buildQueuedExistingThreadTurnInput(queuedMessage, settings),
       });
       return completeDelivery(deliveryResult);
     },
