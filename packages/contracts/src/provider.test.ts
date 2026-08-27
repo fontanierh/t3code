@@ -121,6 +121,15 @@ describe("ProviderSessionStartInput", () => {
 });
 
 describe("ProviderSendTurnInput", () => {
+  it("accepts explicit queue and steer delivery", () => {
+    expect(
+      decodeProviderSendTurnInput({ threadId: "thread-1", deliveryMode: "queue" }).deliveryMode,
+    ).toBe("queue");
+    expect(
+      decodeProviderSendTurnInput({ threadId: "thread-1", deliveryMode: "steer" }).deliveryMode,
+    ).toBe("steer");
+  });
+
   it("accepts codex modelSelection", () => {
     const parsed = decodeProviderSendTurnInput({
       threadId: "thread-1",

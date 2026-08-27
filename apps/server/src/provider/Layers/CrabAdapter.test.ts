@@ -116,7 +116,7 @@ describe("CrabAdapter", () => {
     }),
   );
 
-  it.effect("sends an active follow-up as immediate Crab steering", () =>
+  it.effect("sends explicit queue and steer follow-ups with unique durable input ids", () =>
     Effect.gen(function* () {
       const requestLogPath = NodePath.join(
         yield* Effect.promise(() => NodeFSP.mkdtemp(NodePath.join(NodeOS.tmpdir(), "crab-log-"))),
@@ -150,9 +150,19 @@ describe("CrabAdapter", () => {
           .sendTurn({ threadId, input: "keep working" })
           .pipe(Effect.forkChild({ startImmediately: true }));
         yield* Effect.yieldNow;
-        const steeringResult = yield* adapter.sendTurn({ threadId, input: "steer now" });
+        const queuedResult = yield* adapter.sendTurn({
+          threadId,
+          input: "do this next",
+          deliveryMode: "queue",
+        });
+        const steeringResult = yield* adapter.sendTurn({
+          threadId,
+          input: "steer now",
+          deliveryMode: "steer",
+        });
         yield* adapter.interruptTurn(threadId);
         const firstResult = yield* Fiber.join(firstTurn);
+        assert.equal(queuedResult.turnId, firstResult.turnId);
         assert.equal(steeringResult.turnId, firstResult.turnId);
 
         const requests = (yield* Effect.promise(() => NodeFSP.readFile(requestLogPath, "utf8")))
@@ -178,7 +188,7 @@ describe("CrabAdapter", () => {
         };
         assert.isFalse(containsCredential(newSessionRequest));
         const promptRequests = requests.filter((request) => request.method === "session/prompt");
-        assert.lengthOf(promptRequests, 2);
+        assert.lengthOf(promptRequests, 3);
         const inputMode = (request: Record<string, unknown> | undefined) =>
           (
             request?.params as
@@ -186,7 +196,17 @@ describe("CrabAdapter", () => {
               | undefined
           )?._meta?.crab?.inputMode;
         assert.equal(inputMode(promptRequests[0]), "queue");
-        assert.equal(inputMode(promptRequests[1]), "steer");
+        assert.equal(inputMode(promptRequests[1]), "queue");
+        assert.equal(inputMode(promptRequests[2]), "steer");
+        const clientInputIds = promptRequests.map(
+          (request) =>
+            (
+              request.params as
+                | { readonly _meta?: { readonly crab?: { readonly turnId?: unknown } } }
+                | undefined
+            )?._meta?.crab?.turnId,
+        );
+        assert.lengthOf(new Set(clientInputIds), 3);
       }).pipe(
         Effect.ensuring(Effect.sync(() => clearMcpProviderSession(threadId))),
         Effect.provide(makeAdapterLayer(mock.wrapperPath)),
