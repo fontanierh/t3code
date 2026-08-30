@@ -63,14 +63,14 @@ const resolveResourcePath = Effect.fn("desktop.assets.resolveResourcePath")(func
 
 const sourceTreeIconFileNames = {
   dev: {
-    ico: "blueprint-windows.ico",
-    macPng: "blueprint-macos-1024.png",
-    universalPng: "blueprint-universal-1024.png",
+    ico: "crab-dev-windows.ico",
+    macPng: "crab-dev-macos-1024.png",
+    universalPng: "crab-dev-universal-1024.png",
   },
   prod: {
-    ico: "t3-black-windows.ico",
-    macPng: "black-macos-1024.png",
-    universalPng: "black-universal-1024.png",
+    ico: "crab-windows.ico",
+    macPng: "crab-macos-1024.png",
+    universalPng: "crab-universal-1024.png",
   },
 } as const;
 

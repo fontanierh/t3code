@@ -1,10 +1,10 @@
 # Scripts
 
-> For maintainers. Using T3 Code? See [docs/user](../user/).
+> For maintainers. Using Crab? See [docs/user](../user/).
 
 ## First checkout
 
-T3 Code uses [Vite+](https://viteplus.dev/guide/). Install the global `vp` command, install
+Crab uses [Vite+](https://viteplus.dev/guide/). Install the global `vp` command, install
 dependencies, then start the dev stack:
 
 ```bash
@@ -77,7 +77,7 @@ authenticated.
 ### Desktop `.dmg` packaging notes
 
 - Default build is unsigned/not notarized for local sharing.
-- The DMG build uses `assets/prod/black-macos-1024.png` as the production app icon source.
+- The DMG build uses `assets/prod/crab-macos-1024.png` as the production app icon source.
 - The DMG chrome follows the release channel: neutral for Latest and the Nightly sky artwork for
   Nightly. Blueprint artwork remains exclusive to Dev builds. Packaging rasterizes the selected
   SVG into standard and Retina PNGs inside the disposable staging directory.

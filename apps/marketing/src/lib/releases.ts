@@ -1,4 +1,4 @@
-const REPO = "pingdotgg/t3code";
+const REPO = "fontanierh/crab-ui";
 
 export const RELEASES_URL = `https://github.com/${REPO}/releases`;
 

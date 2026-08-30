@@ -1,6 +1,6 @@
 # Crab
 
-Crab is a persistent agent host. T3 Code connects to Crab's existing runtime and renders its full
+Crab is a persistent agent host. Crab connects to Crab's existing runtime and renders its full
 native event stream; it does not launch or own the underlying agent.
 
 ## Before you connect
@@ -19,7 +19,7 @@ Check the runtime without exposing its captured environment:
 python3 "$HOME/.crab-v2/libexec/v2_bundle.py" status
 ```
 
-## Add Crab to T3 Code
+## Add Crab to Crab
 
 Open **Settings → Providers**, choose **Add provider instance**, then select **Crab**.
 
@@ -37,7 +37,7 @@ Use `codex` as the agent ID when Crab was deployed with its Codex preset. The ag
 agent in Crab's runtime configuration. The adapter ID is a stable name for this T3 integration;
 keep it unchanged so existing channels can resume.
 
-Enter absolute paths in T3 Code. Provider settings are passed directly to the process and do not
+Enter absolute paths in Crab. Provider settings are passed directly to the process and do not
 expand `~` or shell variables.
 
 Each T3 thread attaches to one durable Crab native channel. Reopening a thread resumes that channel
@@ -52,5 +52,5 @@ Refresh the provider status in **Settings → Providers** and check:
 - **State directory** contains Crab's owner-only local IPC endpoint.
 - **Agent ID** exists in Crab's runtime configuration.
 
-T3 Code never copies Crab's local IPC credential into its settings. The facade reads it directly
+Crab never copies Crab's local IPC credential into its settings. The facade reads it directly
 from the owner-only state directory when a channel connects.
