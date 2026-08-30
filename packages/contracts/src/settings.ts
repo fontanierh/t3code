@@ -500,7 +500,7 @@ export type GrokSettings = typeof GrokSettings.Type;
 
 /**
  * Configuration for Crab's ACP stdio facade. Crab owns the durable session
- * and underlying agent process; T3 Code only owns this short-lived ACP client.
+ * and underlying agent process; Crab only owns this short-lived ACP client.
  */
 export const CrabSettings = makeProviderSettingsSchema(
   {
@@ -589,7 +589,7 @@ export const OpenCodeSettings = makeProviderSettingsSchema(
       Schema.withDecodingDefault(Effect.succeed("")),
       Schema.annotateKey({
         title: "Server URL",
-        description: "Leave blank to let T3 Code spawn the server when needed.",
+        description: "Leave blank to let Crab spawn the server when needed.",
         providerSettingsForm: {
           placeholder: "http://127.0.0.1:4096",
           clearWhenEmpty: "omit",

@@ -52,7 +52,7 @@ export const buildInitialCrabProviderSnapshot = Effect.fn("buildInitialCrabProvi
         version: null,
         status: "warning",
         auth: { status: "unknown" },
-        message: "Crab is disabled in T3 Code settings.",
+        message: "Crab is disabled in Crab settings.",
       });
     }
     return buildSnapshot(settings, checkedAt, {
